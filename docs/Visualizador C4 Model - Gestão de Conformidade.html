@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador C4 Model - Gestão de Conformidade</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px 40px; background-color: #f0f2f5; color: #1c1e21; }
+        h1 { text-align: center; color: #1877f2; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #606770; margin-bottom: 40px; }
+        h2 { color: #1c1e21; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top: 50px; }
+        .diagram-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); margin-bottom: 40px; text-align: center; overflow-x: auto; }
+        .description { text-align: left; margin-bottom: 20px; color: #4b4f56; line-height: 1.6; }
+        img { max-width: 100%; height: auto; border: 1px solid #eee; border-radius: 4px; }
+        .plantuml-code { display: none; }
+        .loading { color: #8d949e; font-style: italic; padding: 40px; }
+        .error-msg { color: #fa3e3e; font-weight: bold; display: none; margin-top: 10px; padding: 20px; border: 1px solid #fa3e3e; border-radius: 8px; }
+        .badge { display: inline-block; padding: 4px 12px; background: #e7f3ff; color: #1877f2; border-radius: 16px; font-size: 0.85em; font-weight: 600; margin-bottom: 10px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
+</head>
+<body>
+    <h1>Sistema de Gestão de Conformidade</h1>
+    <p class="subtitle">Arquitetura Baseada no Modelo MVT (Model-View-Template)</p>
+    
+    <div id="diagrams">
+        <!-- Nível 1 -->
+        <h2>Nível 1: Contexto do Sistema</h2>
+        <div class="diagram-container" id="c1">
+            <div class="description">
+                Ilustra a visão macro do sistema, demonstrando a interação do usuário autenticado com a solução e a infraestrutura de armazenamento local.
+            </div>
+            <div class="loading">Gerando diagrama de contexto...</div>
+            <div class="error-msg">Erro ao carregar diagrama de Nível 1.</div>
+            <pre class="plantuml-code">
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+LAYOUT_WITH_LEGEND()
+
+Person(user, "Usuário Autenticado", "Qualquer operador autenticado com acesso estrito via usuário e senha.")
+System(system, "Sistema de Gestão de Conformidade", "Núcleo da aplicação que gerencia responsáveis técnicos, empresas e controle de prazos.")
+System_Ext(storage, "Ambiente de Armazenamento Local", "Infraestrutura física ou de rede onde residem o banco de dados e rotinas de backup.")
+
+Rel(user, system, "Gerencia documentos, visitas e colaboradores", "HTTPS")
+Rel(system, storage, "Persiste dados e executa backups", "FileSystem/Rede")
+@enduml
+            </pre>
+        </div>
+
+        <!-- Nível 2 -->
+        <h2>Nível 2: Contêineres</h2>
+        <div class="diagram-container" id="c2">
+            <div class="description">
+                Exibe os contêineres de execução primários, focando na portabilidade via Docker e isolamento do banco de dados SQLite.
+            </div>
+            <div class="loading">Gerando diagrama de contêineres...</div>
+            <div class="error-msg">Erro ao carregar diagrama de Nível 2.</div>
+            <pre class="plantuml-code">
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+LAYOUT_WITH_LEGEND()
+
+Person(user, "Usuário Autenticado")
+System_Boundary(docker, "Ambiente Docker") {
+    Container(app, "Aplicação Web Dockerizada", "Python / Django", "Container isolado contendo a lógica MVT e dependências.")
+    Container(config, "Variáveis de Ambiente", "Config Files", "Injeta chaves de segurança e caminhos de banco dinamicamente.")
+}
+ContainerDb(db, "Banco de Dados Único (SQLite)", "Arquivo .sqlite", "Persistência relacional em servidor de arquivos interno.")
+
+Rel(user, app, "Interage via navegador padrão", "HTTPS")
+Rel(config, app, "Configura chaves e paths", "Runtime")
+Rel(app, db, "Lê e grava dados (Usuario, Empresa, Visita, etc)", "SQL/ORM")
+@enduml
+            </pre>
+        </div>
+
+        <!-- Nível 3 -->
+        <h2>Nível 3: Componentes</h2>
+        <div class="diagram-container" id="c3">
+            <div class="description">
+                Detalhamento das camadas internas da aplicação seguindo o padrão MVT do Django e o componente de auditoria.
+            </div>
+            <div class="loading">Gerando diagrama de componentes...</div>
+            <div class="error-msg">Erro ao carregar diagrama de Nível 3.</div>
+            <pre class="plantuml-code">
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_WITH_LEGEND()
+
+Container_Boundary(django, "Aplicação Django") {
+    Component(template, "Camada de Template", "Interface / Dashboards", "Renderiza UI, alertas de conformidade e opções de cadastro.")
+    Component(view, "Camada de View", "Controladores Lógicos", "Orquestra requisições e processa cálculos de vencimentos.")
+    Component(auth, "Camada de Autenticação", "Segurança / Criptografia", "Algoritmos de hash e proteção de dados sensíveis (LGPD).")
+    Component(model, "Camada de Model", "Mapeamento Relacional", "Entidades transacionais e estruturas de junção.")
+    Component(logger, "Logger Interceptor", "Auditoria", "Escuta mutações de dados para registro de rastreabilidade.")
+}
+ContainerDb(db, "SQLite", "Database")
+
+Rel(template, view, "Envia requisições de usuário")
+Rel(view, auth, "Solicita validação de acesso")
+Rel(view, model, "Solicita processamento de negócio")
+Rel(auth, model, "Repassa dados criptografados")
+Rel(model, logger, "Notifica alteração de dados")
+Rel(logger, db, "Grava log de auditoria", "SQL")
+Rel(model, db, "Persiste dados de negócio", "SQL")
+@enduml
+            </pre>
+        </div>
+
+        <!-- Nível 4 -->
+        <h2>Nível 4: Detalhamento de Classes (MVT)</h2>
+        <div class="diagram-container" id="c4">
+            <div class="description">
+                Representação detalhada das classes do sistema, organizadas por camadas (Templates, Views, Services e Models), exibindo seus atributos, métodos e as relações de navegação e processamento.
+            </div>
+            <div class="loading">Gerando diagrama de classes...</div>
+            <div class="error-msg">Erro ao carregar diagrama de Nível 4.</div>
+            <pre class="plantuml-code">
+@startuml
+skinparam class {
+    BackgroundColor White
+    ArrowColor #1877f2
+    BorderColor #1877f2
+}
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide empty members
+
+package "Camada de Template (Interface)" #E7F3FF {
+    class LoginTemplate {
+        + username
+        + password
+        --
+        + renderizarTelaLogin()
+        + enviarFormularioDeAcesso()
+    }
+
+    class HomeTemplate {
+        + listaAlertasConformidade
+        + listaRelatoriosDisponiveis
+        --
+        + renderizarDashboardInicial()
+        + navegarParaOpcoes()
+    }
+
+    class EmpresaTemplate {
+        + ListaDeEmpresas
+        --
+        + buscarEmpresas()
+        + editarRegistro()
+        + apagarRegistro()
+        + cadastrarNovoRegistro()
+        + verDependencias()
+        + verHistoricoVisitas()
+    }
+
+    class EmpresaCadastroTemplate {
+        + nomeEmpresa
+        + enderecoEmpresa
+        + cnpjEmpresa
+        + fkResponsavelTecnico
+        + listaResponsaveisTecnicos
+        --
+        + renderizarFormularioCadastro()
+        + listarResponsaveisTecnicos()
+        + enviarDadosParaView()
+    }
+}
+
+package "Camada de View (Controladores)" #D1E8FF {
+    class AuthView {
+        + httpRequest
+        + sessaoAtiva
+        --
+        + processarPostLogin()
+        + redirecionarParaHome()
+    }
+
+    class EmpresaView {
+        + httpRequest
+        + dadosFormularioEmpresa
+        --
+        + processarPostCadastro()
+        + validarRegrasNegocio()
+        + retornarSucessoTelaInicial()
+    }
+}
+
+package "Camada de Lógica e Segurança" #B9D9FF {
+    class AuthService {
+        + algoritmoHash
+        + dadosCriptografados
+        --
+        + validarCredenciais()
+        + compararHashSenha()
+        + converterCPF()
+    }
+
+    class LoggerInterceptor {
+        + estadoOriginalDado
+        + estadoNovoDado
+        + idUsuarioRequisicao
+        + tipoOperacaoExecutada
+        --
+        + interceptarRequisicaoModel()
+        + capturarEstadoOriginal()
+        + montarObjetoDeLog()
+        + dispararGravacaoAssincrona()
+    }
+}
+
+package "Camada de Model (Persistência)" #A2CAFF {
+    class UserModel {
+        + idUsuario
+        + username
+        + passwordHash
+        --
+        + buscarPorUsername()
+        + verificarStatusAtivo()
+    }
+
+    class EmpresaModel {
+        + idEmpresa
+        + nome
+        + endereco
+        + cnpj
+        + fkRespTecnico
+        --
+        + salvarNovoRegistro()
+        + alterarRegistroExistente()
+        + deletarRegistro()
+    }
+
+    class LogAuditoriaModel {
+        + idLog
+        + fkUsuario
+        + codigoRegistroAfetado
+        + tipoAcao
+        + dataHoraOperacao
+        + descricaoDetalhada
+        --
+        + inserirRegistroAuditoria()
+    }
+}
+
+' Relacionamentos e Fluxo
+LoginTemplate -.> AuthView : "envia credenciais"
+AuthView -right-> AuthService : "solicita validação"
+AuthService -.> UserModel : "consulta hash"
+AuthView -up-> HomeTemplate : "redireciona se OK"
+
+HomeTemplate -.> EmpresaTemplate : "navegação"
+EmpresaTemplate -.> EmpresaCadastroTemplate : "abrir formulário"
+EmpresaCadastroTemplate -.> EmpresaView : "submeter dados"
+EmpresaView -right-> EmpresaModel : "persiste dados"
+
+EmpresaModel -down-> LoggerInterceptor : "dispara evento"
+LoggerInterceptor -right-> LogAuditoriaModel : "gera registro"
+
+' Alinhamento das camadas (leveled)
+LoginTemplate -[hidden]down- AuthView
+AuthView -[hidden]down- AuthService
+AuthService -[hidden]down- UserModel
+
+@enduml
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const containers = document.querySelectorAll('.diagram-container');
+            
+            containers.forEach(container => {
+                const codeElement = container.querySelector('.plantuml-code');
+                const loading = container.querySelector('.loading');
+                const error = container.querySelector('.error-msg');
+                
+                if (!codeElement) return;
+
+                const code = codeElement.textContent.trim();
+                
+                try {
+                    const encoded = plantumlEncoder.encode(code);
+                    const url = 'https://www.plantuml.com/plantuml/svg/' + encoded;
+                    
+                    const img = new Image();
+                    img.src = url;
+                    img.onload = () => {
+                        loading.style.display = 'none';
+                        container.appendChild(img);
+                    };
+                    img.onerror = () => {
+                        loading.style.display = 'none';
+                        error.style.display = 'block';
+                    };
+                } catch (e) {
+                    loading.style.display = 'none';
+                    error.style.display = 'block';
+                    console.error(e);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
