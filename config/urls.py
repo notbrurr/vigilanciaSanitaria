@@ -18,10 +18,11 @@ from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LogoutView
 from view.auth import AuthView, home_view
+from view.crud import get_crud_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', AuthView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
     path('', home_view, name='home'),
-]
+] + get_crud_urls()

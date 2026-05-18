@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gestão de Conformidade{% endblock %}</title>
+    <!-- Icons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --primary: #1e3c72;
+            --secondary: #2a5298;
+            --accent: #4361ee;
+            --background: #f4f7fc;
+            --surface: #ffffff;
+            --text-dark: #2b3648;
+            --text-light: #6b7280;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text-dark);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+        
+        /* Custom scrollbar for sidebar */
+        .nav-menu::-webkit-scrollbar {
+            width: 5px;
+        }
+        .nav-menu::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .nav-item i {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Topbar */
+        .topbar {
+            height: 70px;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .page-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .logout-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background-color: var(--background);
+        }
+
+        /* Generic Card Container */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid var(--border);
+            padding: 24px;
+        }
+
+        /* Generic Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #3651d4;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text-dark);
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><i class='bx bx-shield-plus'></i> VigSanit</h2>
+        </div>
+        <div class="nav-menu">
+            <a href="{% url 'home' %}" class="nav-item">
+                <i class='bx bx-home-alt'></i> Dashboard
+            </a>
+            
+            <div style="padding: 15px 24px 5px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.5);">
+                Cadastros Base
+            </div>
+            <a href="{% url 'empresa_list' %}" class="nav-item">
+                <i class='bx bx-buildings'></i> Empresas
+            </a>
+            <a href="{% url 'responsaveltecnico_list' %}" class="nav-item">
+                <i class='bx bx-user-pin'></i> Responsáveis Técnicos
+            </a>
+            <a href="{% url 'colaborador_list' %}" class="nav-item">
+                <i class='bx bx-group'></i> Colaboradores
+            </a>
+            
+            <div style="padding: 15px 24px 5px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.5);">
+                Configurações
+            </div>
+            <a href="{% url 'tipodocumento_list' %}" class="nav-item">
+                <i class='bx bx-file-blank'></i> Tipos de Documento
+            </a>
+            <a href="{% url 'categoriavisita_list' %}" class="nav-item">
+                <i class='bx bx-list-ul'></i> Categorias de Visita
+            </a>
+            
+            <div style="padding: 15px 24px 5px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.5);">
+                Operações
+            </div>
+            <a href="{% url 'documento_list' %}" class="nav-item">
+                <i class='bx bx-folder-open'></i> Documentos
+            </a>
+            <a href="{% url 'necessidadedocumento_list' %}" class="nav-item">
+                <i class='bx bx-task'></i> Necessidades Doc.
+            </a>
+            <a href="{% url 'visita_list' %}" class="nav-item">
+                <i class='bx bx-calendar-check'></i> Visitas Técnicas
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="page-title">{% block page_title %}Sistema de Gestão{% endblock %}</div>
+            <div class="user-profile">
+                <span class="user-name">Olá, {{ user.username|default:"Admin" }}</span>
+                <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">
+                        <i class='bx bx-log-out'></i> Sair
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <section class="content-area">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Gestão de Conformidade{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 40px auto; text-align: center;">
+    <div class="card" style="border-top: 4px solid var(--danger);">
+        <i class='bx bx-error-circle' style="font-size: 4rem; color: var(--danger); margin-bottom: 20px;"></i>
+        
+        <h2 style="color: var(--text-dark); margin-bottom: 15px;">Confirmação de Exclusão</h2>
+        
+        <p style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 30px;">
+            Tem certeza que deseja excluir o registro <strong>"{{ object }}"</strong>? <br>
+            Esta ação não poderá ser desfeita.
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div style="display: flex; justify-content: center; gap: 15px;">
+                <a href="{% url list_url %}" class="btn btn-secondary">
+                    <i class='bx bx-x'></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class='bx bx-trash'></i> Sim, Excluir Definitivamente
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
