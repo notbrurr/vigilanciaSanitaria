@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Gestão de Conformidade{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .django-form p {
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .django-form label {
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: var(--text-dark);
+        font-size: 0.95rem;
+    }
+    
+    .django-form input[type="text"],
+    .django-form input[type="email"],
+    .django-form input[type="number"],
+    .django-form input[type="password"],
+    .django-form input[type="date"],
+    .django-form select,
+    .django-form textarea {
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 1rem;
+        background-color: #f8fafc;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+    
+    .django-form input:focus,
+    .django-form select:focus,
+    .django-form textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+        background-color: white;
+    }
+    
+    .django-form .helptext {
+        font-size: 0.8rem;
+        color: var(--text-light);
+        margin-top: 4px;
+    }
+    
+    .django-form .errorlist {
+        color: var(--danger);
+        list-style: none;
+        margin-bottom: 5px;
+        font-size: 0.85rem;
+        padding: 0;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+    }
+    
+    .django-form input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="header-actions">
+        <h2 style="color: var(--primary);">{{ title }}</h2>
+        <a href="{% url list_url %}" class="btn btn-secondary">
+            <i class='bx bx-arrow-back'></i> Voltar para Lista
+        </a>
+    </div>
+
+    <div class="card">
+        <form method="post" enctype="multipart/form-data" class="django-form">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div style="background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            
+            {{ form.as_p }}
+            
+            <div class="form-actions">
+                <a href="{% url list_url %}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class='bx bx-save'></i> Salvar Registro
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

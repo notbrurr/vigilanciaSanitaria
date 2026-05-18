@@ -1,5 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+import datetime
+import calendar
+
+def add_months(sourcedate, months):
+    month = sourcedate.month - 1 + months
+    year = sourcedate.year + month // 12
+    month = month % 12 + 1
+    day = min(sourcedate.day, calendar.monthrange(year, month)[1])
+    return datetime.date(year, month, day)
 
 class User(AbstractUser):
     # O C4 Model menciona UserModel com idUsuario, username, passwordHash
@@ -70,6 +79,11 @@ class Documento(models.Model):
     data_vencimento = models.DateField(blank=True, null=True, verbose_name="Data de Vencimento")
     arquivo = models.FileField(upload_to='documentos/', blank=True, null=True, verbose_name="Arquivo Anexo")
 
+    def save(self, *args, **kwargs):
+        if not self.data_vencimento and self.tipo.validade_meses and self.data_emissao:
+            self.data_vencimento = add_months(self.data_emissao, self.tipo.validade_meses)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.tipo.descricao} - {self.empresa.razao_social}"
 
@@ -85,6 +99,14 @@ class Visita(models.Model):
     data_realizacao = models.DateTimeField(blank=True, null=True, verbose_name="Data e Hora da Realização")
     observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
     realizada = models.BooleanField(default=False, verbose_name="Visita Realizada")
+    responsavel_tecnico = models.ForeignKey('ResponsavelTecnico', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Responsável Técnico (Época)")
+
+    def save(self, *args, **kwargs):
+        if not self.responsavel_tecnico and self.empresa:
+            rt = self.empresa.responsaveis_tecnicos.first()
+            if rt:
+                self.responsavel_tecnico = rt
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Visita: {self.empresa.razao_social} ({self.categoria.descricao})"
@@ -98,7 +120,16 @@ class Colaborador(models.Model):
     nome = models.CharField(max_length=255, verbose_name="Nome do Colaborador")
     cpf = models.CharField(max_length=11, unique=True, verbose_name="CPF")
     data_entrada = models.DateField(verbose_name="Data de Entrada")
+    data_vencimento = models.DateField(blank=True, null=True, verbose_name="Data de Vencimento (1 Ano)")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
+
+    def save(self, *args, **kwargs):
+        if not self.data_vencimento and self.data_entrada:
+            try:
+                self.data_vencimento = self.data_entrada.replace(year=self.data_entrada.year + 1)
+            except ValueError:
+                self.data_vencimento = self.data_entrada + datetime.timedelta(days=365)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nome} - {self.empresa.razao_social}"
