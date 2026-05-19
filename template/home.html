@@ -64,7 +64,7 @@
             <i class='bx bx-buildings'></i>
         </div>
         <div class="stat-info">
-            <h3>Gestão</h3>
+            <h3>{{ total_empresas }}</h3>
             <p>Empresas Cadastradas</p>
         </div>
     </div>
@@ -74,7 +74,7 @@
             <i class='bx bx-calendar-exclamation'></i>
         </div>
         <div class="stat-info">
-            <h3>Agenda</h3>
+            <h3>{{ visitas_pendentes }}</h3>
             <p>Visitas Programadas</p>
         </div>
     </div>
@@ -84,8 +84,18 @@
             <i class='bx bx-check-shield'></i>
         </div>
         <div class="stat-info">
-            <h3>Controle</h3>
+            <h3>{{ docs_regulares }}</h3>
             <p>Documentos Regulares</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
+            <i class='bx bx-error-alt'></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ docs_vencidos }}</h3>
+            <p>Documentos Vencidos</p>
         </div>
     </div>
 </div>
