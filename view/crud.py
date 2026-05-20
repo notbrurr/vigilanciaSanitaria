@@ -21,8 +21,8 @@ class GenericListView(LoginRequiredMixin, ListView):
         context['update_url_name'] = f"{self.model._meta.model_name}_update"
         context['delete_url_name'] = f"{self.model._meta.model_name}_delete"
         
-        # Select first 5 non-primary key fields to show in the table
-        fields = [f for f in self.model._meta.fields if not f.primary_key][:5]
+        # Selecionar campos a exibir (ignora pk e arquivos para não poluir a tabela)
+        fields = [f for f in self.model._meta.fields if not f.primary_key and f.get_internal_type() != 'FileField']
         context['headers'] = [f.verbose_name.title() if hasattr(f, 'verbose_name') else f.name for f in fields]
         
         rows = []
@@ -30,8 +30,12 @@ class GenericListView(LoginRequiredMixin, ListView):
             row = []
             for f in fields:
                 val = getattr(obj, f.name)
-                # Formatar valor (se for Foreign Key ele chama __str__)
-                row.append(str(val) if val is not None else '')
+                is_long_text = f.get_internal_type() == 'TextField'
+                str_val = str(val) if val is not None else ''
+                row.append({
+                    'value': str_val,
+                    'is_long': is_long_text
+                })
             rows.append({'obj': obj, 'cells': row})
         context['rows'] = rows
         return context
