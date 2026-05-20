@@ -101,7 +101,17 @@
                 {% for row in rows %}
                 <tr>
                     {% for cell in row.cells %}
-                    <td>{{ cell }}</td>
+                    <td>
+                        {% if cell.is_long and cell.value %}
+                        <button type="button" class="btn-icon" style="background: var(--secondary); cursor: pointer;" onclick="showObservation('{{ cell.value|escapejs }}')" title="Ver Texto Completo">
+                            <i class='bx bx-message-square-detail'></i>
+                        </button>
+                        {% elif cell.is_long %}
+                        <span style="color: var(--text-light); font-size: 0.8rem;">-</span>
+                        {% else %}
+                        {{ cell.value }}
+                        {% endif %}
+                    </td>
                     {% endfor %}
                     <td>
                         <div class="actions" style="justify-content: center;">
@@ -126,4 +136,19 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function showObservation(text) {
+        Swal.fire({
+            title: 'Informações',
+            html: text.replace(/\n/g, '<br>'),
+            icon: 'info',
+            confirmButtonColor: 'var(--primary)',
+            confirmButtonText: 'Fechar'
+        });
+    }
+</script>
 {% endblock %}
