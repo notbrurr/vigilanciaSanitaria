@@ -16,7 +16,7 @@ class User(AbstractUser):
     pass
 
 class Empresa(models.Model):
-    cnpj = models.CharField(max_length=14, unique=True, verbose_name="CNPJ")
+    cnpj = models.CharField(max_length=20, unique=True, verbose_name="CNPJ")
     razao_social = models.CharField(max_length=255, verbose_name="Razão Social")
     nome_fantasia = models.CharField(max_length=255, verbose_name="Nome Fantasia", blank=True, null=True)
     endereco = models.CharField(max_length=255, verbose_name="Endereço")

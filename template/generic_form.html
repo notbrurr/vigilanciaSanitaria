@@ -111,3 +111,119 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/imask"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Máscaras
+    const cpfInput = document.getElementById('id_cpf');
+    const cnpjInput = document.getElementById('id_cnpj');
+    const telInput = document.getElementById('id_telefone');
+
+    if (cpfInput) {
+        cpfInput.removeAttribute('maxlength');
+        IMask(cpfInput, { mask: '000.000.000-00' });
+        
+        cpfInput.addEventListener('blur', function() {
+            const valor = this.value.replace(/\D/g, '');
+            if (valor.length === 11) {
+                fetch(`/api/validate/?tipo=cpf&valor=${valor}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.valid) {
+                            this.setCustomValidity('CPF inválido.');
+                            this.reportValidity();
+                        } else {
+                            this.setCustomValidity('');
+                        }
+                    });
+            } else if (valor.length > 0) {
+                this.setCustomValidity('CPF incompleto.');
+                this.reportValidity();
+            }
+        });
+    }
+
+    if (cnpjInput) {
+        cnpjInput.removeAttribute('maxlength');
+        IMask(cnpjInput, { mask: '00.000.000/0000-00' });
+        
+        cnpjInput.addEventListener('blur', function() {
+            const valor = this.value.replace(/\D/g, '');
+            if (valor.length === 14) {
+                // Usando BrasilAPI
+                fetch(`https://brasilapi.com.br/api/cnpj/v1/${valor}`)
+                    .then(res => {
+                        if (!res.ok) {
+                            this.setCustomValidity('CNPJ inválido ou não encontrado.');
+                            this.reportValidity();
+                        } else {
+                            this.setCustomValidity('');
+                            // Opcional: preencher outros campos com os dados retornados
+                        }
+                    })
+                    .catch(() => {
+                        this.setCustomValidity('Erro ao validar CNPJ.');
+                        this.reportValidity();
+                    });
+            } else if (valor.length > 0) {
+                this.setCustomValidity('CNPJ incompleto.');
+                this.reportValidity();
+            }
+        });
+    }
+
+    if (telInput) {
+        telInput.removeAttribute('maxlength');
+        IMask(telInput, {
+            mask: [
+                { mask: '(00) 0000-0000' },
+                { mask: '(00) 00000-0000' }
+            ]
+        });
+        
+        telInput.addEventListener('blur', function() {
+            const valor = this.value.replace(/\D/g, '');
+            if (valor.length > 0 && valor.length < 10) {
+                this.setCustomValidity('Telefone incompleto.');
+                this.reportValidity();
+            } else if (valor.length >= 10) {
+                fetch(`/api/validate/?tipo=telefone&valor=${valor}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.valid) {
+                            this.setCustomValidity('Telefone inválido.');
+                            this.reportValidity();
+                        } else {
+                            this.setCustomValidity('');
+                        }
+                    });
+            }
+        });
+    }
+    
+    const emailInput = document.getElementById('id_email');
+    if (emailInput) {
+        emailInput.addEventListener('blur', function() {
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (this.value && !regex.test(this.value)) {
+                this.setCustomValidity('Formato de e-mail inválido.');
+                this.reportValidity();
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+    
+    const form = document.querySelector('form.django-form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            if (cpfInput) cpfInput.value = cpfInput.value.replace(/\D/g, '');
+            if (cnpjInput) cnpjInput.value = cnpjInput.value.replace(/\D/g, '');
+            if (telInput) telInput.value = telInput.value.replace(/\D/g, '');
+        });
+    }
+});
+</script>
+{% endblock %}
