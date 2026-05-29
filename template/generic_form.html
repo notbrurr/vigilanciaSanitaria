@@ -58,9 +58,13 @@
     .django-form .errorlist {
         color: var(--danger);
         list-style: none;
-        margin-bottom: 5px;
+        margin-top: 5px;
+        margin-bottom: 10px;
         font-size: 0.85rem;
-        padding: 0;
+        padding: 8px 12px;
+        background: rgba(239, 68, 68, 0.08);
+        border-radius: 6px;
+        border-left: 3px solid var(--danger);
     }
     
     .form-actions {
@@ -224,6 +228,72 @@ document.addEventListener('DOMContentLoaded', function() {
             if (telInput) telInput.value = telInput.value.replace(/\D/g, '');
         });
     }
+
+    // Dynamic Searchable Dropdowns (Lupa) para campos do tipo select
+    document.querySelectorAll('form.django-form select').forEach(select => {
+        // Apenas para dropdowns com mais de 3 opções (para ser realmente didático e útil)
+        if (select.options.length > 3) {
+            const container = document.createElement('div');
+            container.className = 'searchable-select-container';
+            container.style.position = 'relative';
+            container.style.marginBottom = '10px';
+            container.style.width = '100%';
+            container.style.maxWidth = '400px';
+
+            const searchIcon = document.createElement('i');
+            searchIcon.className = 'bx bx-search';
+            searchIcon.style.position = 'absolute';
+            searchIcon.style.left = '12px';
+            searchIcon.style.top = '50%';
+            searchIcon.style.transform = 'translateY(-50%)';
+            searchIcon.style.color = 'var(--text-light)';
+            searchIcon.style.fontSize = '1rem';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = `Filtrar opções...`;
+            input.style.width = '100%';
+            input.style.padding = '8px 12px 8px 36px';
+            input.style.fontSize = '0.9rem';
+            input.style.border = '1px solid var(--border)';
+            input.style.borderRadius = '6px';
+            input.style.background = '#f8fafc';
+            input.style.outline = 'none';
+            input.style.transition = 'all 0.2s';
+            input.style.fontFamily = 'inherit';
+
+            input.addEventListener('focus', function() {
+                this.style.borderColor = 'var(--accent)';
+                this.style.backgroundColor = '#ffffff';
+            });
+            input.addEventListener('blur', function() {
+                this.style.borderColor = 'var(--border)';
+                this.style.backgroundColor = '#f8fafc';
+            });
+
+            container.appendChild(searchIcon);
+            container.appendChild(input);
+
+            // Insere o campo de busca imediatamente antes do dropdown <select>
+            select.parentNode.insertBefore(container, select);
+
+            // Filtra as opções do dropdown em tempo real
+            input.addEventListener('keyup', function() {
+                const filter = this.value.toLowerCase();
+                let firstMatch = null;
+                for (let i = 0; i < select.options.length; i++) {
+                    const option = select.options[i];
+                    const text = option.text.toLowerCase();
+                    if (text.indexOf(filter) > -1) {
+                        option.style.display = '';
+                        if (option.value && !firstMatch) firstMatch = option;
+                    } else {
+                        option.style.display = 'none';
+                    }
+                }
+            });
+        }
+    });
 });
 </script>
 {% endblock %}

@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Gestão de Conformidade</title>
+    <title>Login - Vigilância Sanitária</title>
+    <!-- Icons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Outfit', sans-serif;
         }
 
         body {
@@ -44,11 +46,37 @@
             margin-bottom: 2rem;
         }
 
-        .login-header h1 {
+        .login-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 1rem;
             color: #1e3c72;
-            font-size: 1.8rem;
+        }
+
+        .login-logo i {
+            font-size: 2.8rem;
+        }
+
+        .login-logo-text {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            line-height: 1;
+        }
+
+        .login-logo-text .main-text {
+            font-size: 1.6rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            letter-spacing: 0;
+        }
+
+        .login-logo-text .sub-text {
+            font-size: 1.15rem;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
         }
 
         .login-header p {
@@ -124,7 +152,13 @@
 
     <div class="login-container">
         <div class="login-header">
-            <h1>Gestão de Conformidade</h1>
+            <div class="login-logo">
+                <i class='bx bx-shield-plus'></i>
+                <div class="login-logo-text">
+                    <span class="main-text">Vigilância</span>
+                    <span class="sub-text">Sanitária</span>
+                </div>
+            </div>
             <p>Acesse sua conta para continuar</p>
         </div>
 

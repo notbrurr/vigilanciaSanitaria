@@ -13,7 +13,39 @@ MODELS_TO_CRUD = [
 class GenericListView(LoginRequiredMixin, ListView):
     template_name = 'generic_list.html'
     
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = self.request.GET.get('status')
+        if self.model == Visita and status == 'pendente':
+            queryset = queryset.filter(realizada=False)
+        elif self.model == Documento:
+            import datetime
+            hoje = datetime.date.today()
+            if status == 'vencido':
+                queryset = queryset.filter(data_vencimento__lt=hoje)
+            elif status == 'regular':
+                queryset = queryset.filter(data_vencimento__gte=hoje)
+        elif self.model == Empresa:
+            status_filtro = self.request.GET.get('status_documento')
+            if status_filtro:
+                import datetime
+                hoje = datetime.date.today()
+                if status_filtro == 'vencido':
+                    queryset = queryset.filter(documentos__data_vencimento__lt=hoje).distinct()
+                elif status_filtro == 'regular':
+                    empresas_com_vencidos = Empresa.objects.filter(documentos__data_vencimento__lt=hoje).values_list('id', flat=True)
+                    queryset = queryset.exclude(id__in=empresas_com_vencidos)
+                
+        # Ordenar por empresa se o modelo tiver campo relacionado a Empresa
+        if hasattr(self.model, 'empresa'):
+            queryset = queryset.order_by('empresa__razao_social')
+            
+        return queryset
+        
     def get_context_data(self, **kwargs):
+        import datetime
+        from django.utils import timezone
+        
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.verbose_name.title()
         context['model_name_plural'] = self.model._meta.verbose_name_plural.title()
@@ -21,21 +53,58 @@ class GenericListView(LoginRequiredMixin, ListView):
         context['update_url_name'] = f"{self.model._meta.model_name}_update"
         context['delete_url_name'] = f"{self.model._meta.model_name}_delete"
         
-        # Selecionar campos a exibir (ignora pk e arquivos para não poluir a tabela)
-        fields = [f for f in self.model._meta.fields if not f.primary_key and f.get_internal_type() != 'FileField']
+        # Selecionar campos a exibir (ignora pk)
+        fields = [f for f in self.model._meta.fields if not f.primary_key]
         context['headers'] = [f.verbose_name.title() if hasattr(f, 'verbose_name') else f.name for f in fields]
         
+        show_extra_companies = False
+        if self.model in [TipoDocumento, CategoriaVisita]:
+            show_extra_companies = True
+            context['headers'].append("Empresas Relacionadas")
+            
         rows = []
         for obj in context['object_list']:
             row = []
             for f in fields:
                 val = getattr(obj, f.name)
                 is_long_text = f.get_internal_type() == 'TextField'
-                str_val = str(val) if val is not None else ''
+                is_file = f.get_internal_type() == 'FileField'
+                url_val = val.url if is_file and val else ''
+                
+                if isinstance(val, bool):
+                    str_val = 'Sim' if val else 'Não'
+                elif isinstance(val, datetime.datetime):
+                    local_val = timezone.localtime(val) if timezone.is_aware(val) else val
+                    str_val = local_val.strftime('%d/%m/%Y às %H:%M')
+                elif isinstance(val, datetime.date):
+                    str_val = val.strftime('%d/%m/%Y')
+                elif is_file and val:
+                    str_val = val.name.split('/')[-1]
+                else:
+                    str_val = str(val) if val is not None else ''
+                    
                 row.append({
                     'value': str_val,
-                    'is_long': is_long_text
+                    'is_long': is_long_text,
+                    'is_file': is_file,
+                    'file_url': url_val
                 })
+                
+            if show_extra_companies:
+                if self.model == TipoDocumento:
+                    empresas = Empresa.objects.filter(documentos__tipo=obj).distinct()
+                    val_str = ", ".join([emp.razao_social for emp in empresas]) if empresas.exists() else "Nenhuma"
+                elif self.model == CategoriaVisita:
+                    empresas = Empresa.objects.filter(visitas__categoria=obj).distinct()
+                    val_str = ", ".join([emp.razao_social for emp in empresas]) if empresas.exists() else "Nenhuma"
+                    
+                row.append({
+                    'value': val_str,
+                    'is_long': len(val_str) > 50,
+                    'is_file': False,
+                    'file_url': ''
+                })
+                
             rows.append({'obj': obj, 'cells': row})
         context['rows'] = rows
         return context

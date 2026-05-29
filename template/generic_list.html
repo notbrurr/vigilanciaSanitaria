@@ -74,6 +74,11 @@
         margin-bottom: 10px;
         color: #cbd5e1;
     }
+    #tableSearch:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+        background-color: white;
+    }
 </style>
 {% endblock %}
 
@@ -83,6 +88,27 @@
     <a href="{% url create_url %}" class="btn btn-primary">
         <i class='bx bx-plus'></i> Novo Registro
     </a>
+</div>
+
+<div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+    <div class="search-container" style="position: relative; max-width: 400px; display: flex; align-items: center; flex: 1; min-width: 250px;">
+        <i class='bx bx-search' style="position: absolute; left: 14px; color: var(--text-light); font-size: 1.25rem;"></i>
+        <input type="text" id="tableSearch" placeholder="Pesquisar nesta listagem..." style="width: 100%; padding: 10px 16px 10px 42px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: #f8fafc; transition: all 0.2s; font-family: inherit; outline: none;" onkeyup="filterTable()">
+    </div>
+
+    {% if model_name == 'Empresa' %}
+    <div class="filter-container" style="background: var(--surface); padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 10px;">
+        <form method="get" id="filterForm" style="display: flex; align-items: center; gap: 10px; margin: 0;">
+            <i class='bx bx-filter-alt' style="font-size: 1.1rem; color: var(--accent);"></i>
+            <label for="status_documento" style="font-size: 0.9rem; font-weight: 600; color: var(--text-dark);">Documentos:</label>
+            <select name="status_documento" id="status_documento" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; outline: none; background: #f8fafc; cursor: pointer; transition: all 0.2s;" onchange="document.getElementById('filterForm').submit()">
+                <option value="">-- Todos --</option>
+                <option value="regular" {% if request.GET.status_documento == 'regular' %}selected{% endif %}>Regular (Tudo em Dia)</option>
+                <option value="vencido" {% if request.GET.status_documento == 'vencido' %}selected{% endif %}>Vencido (Com Pendências)</option>
+            </select>
+        </form>
+    </div>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -102,8 +128,16 @@
                 <tr>
                     {% for cell in row.cells %}
                     <td>
-                        {% if cell.is_long and cell.value %}
-                        <button type="button" class="btn-icon" style="background: var(--secondary); cursor: pointer;" onclick="showObservation('{{ cell.value|escapejs }}')" title="Ver Texto Completo">
+                        {% if cell.is_file %}
+                            {% if cell.file_url %}
+                            <a href="{{ cell.file_url }}" target="_blank" class="btn-icon" style="background: var(--success); display: inline-flex;" title="Visualizar Arquivo">
+                                <i class='bx bx-file'></i>
+                            </a>
+                            {% else %}
+                            <span style="color: var(--text-light); font-size: 0.85rem;">Sem anexo</span>
+                            {% endif %}
+                        {% elif cell.is_long and cell.value %}
+                        <button type="button" class="btn-icon" style="background: var(--secondary); cursor: pointer; display: inline-flex;" onclick="showObservation('{{ cell.value|escapejs }}')" title="Ver Texto Completo">
                             <i class='bx bx-message-square-detail'></i>
                         </button>
                         {% elif cell.is_long %}
@@ -115,12 +149,17 @@
                     {% endfor %}
                     <td>
                         <div class="actions" style="justify-content: center;">
+                            {% if model_name == 'Empresa' %}
+                            <button type="button" class="btn-icon" style="background: var(--accent); border: none; cursor: pointer; display: inline-flex;" title="Exibir Detalhes" onclick="showCompanyDetails({{ row.obj.pk }})">
+                                <i class='bx bx-show-alt'></i>
+                            </button>
+                            {% endif %}
                             <a href="{% url update_url_name row.obj.pk %}" class="btn-icon btn-edit" title="Editar">
                                 <i class='bx bx-edit-alt'></i>
                             </a>
-                            <a href="{% url delete_url_name row.obj.pk %}" class="btn-icon btn-delete" title="Excluir">
+                            <button type="button" class="btn-icon btn-delete" style="border: none; cursor: pointer;" title="Excluir" onclick="confirmDelete('{% url delete_url_name row.obj.pk %}', '{{ row.obj|escapejs }}')">
                                 <i class='bx bx-trash'></i>
-                            </a>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -149,6 +188,178 @@
             confirmButtonColor: 'var(--primary)',
             confirmButtonText: 'Fechar'
         });
+    }
+
+    function confirmDelete(deleteUrl, objName) {
+        Swal.fire({
+            title: 'Tem certeza?',
+            html: `Deseja realmente excluir o registro <strong>"${objName}"</strong>?<br>Esta ação não poderá ser desfeita.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: 'var(--danger)',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = deleteUrl;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                form.appendChild(csrfInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    function filterTable() {
+        const input = document.getElementById("tableSearch");
+        const filter = input.value.toLowerCase();
+        const table = document.querySelector("table");
+        if (!table) return;
+        const trs = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < trs.length; i++) {
+            let rowContainsFilter = false;
+            const tds = trs[i].getElementsByTagName("td");
+            
+            // Loop em todas as colunas exceto a última (Ações)
+            for (let j = 0; j < tds.length - 1; j++) {
+                const cell = tds[j];
+                if (cell) {
+                    const text = cell.textContent || cell.innerText;
+                    if (text.toLowerCase().indexOf(filter) > -1) {
+                        rowContainsFilter = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (rowContainsFilter) {
+                trs[i].style.display = "";
+            } else {
+                trs[i].style.display = "none";
+            }
+        }
+    }
+
+    function showCompanyDetails(empresaId) {
+        Swal.fire({
+            title: 'Carregando detalhes...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch(`/api/empresa/${empresaId}/detalhes/`)
+            .then(res => res.json())
+            .then(data => {
+                let rtsHtml = data.responsaveis.map(rt => `
+                    <div style="padding: 8px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem;">
+                        <strong>${rt.nome}</strong> - ${rt.conselho} (Reg. ${rt.registro})
+                    </div>
+                `).join('') || '<p style="color: var(--text-light); font-size: 0.85rem; margin: 0;">Nenhum cadastrado</p>';
+
+                let docsHtml = data.documentos.map(doc => {
+                    let badgeStyle = doc.status === 'Vencido' 
+                        ? 'background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger);' 
+                        : 'background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid var(--success);';
+                    return `
+                        <tr style="font-size: 0.85rem;">
+                            <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: left;"><strong>${doc.tipo}</strong></td>
+                            <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: center;">${doc.emissao}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: center;">${doc.vencimento}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: center;">
+                                <span style="padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; ${badgeStyle}">${doc.status}</span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('') || '<tr><td colspan="4" style="padding: 10px; color: var(--text-light); text-align: center; font-size: 0.85rem;">Nenhum documento cadastrado</td></tr>';
+
+                let visitasHtml = data.visitas.map(vis => {
+                    let badgeStyle = vis.status === 'Realizada' 
+                        ? 'background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid var(--success);' 
+                        : 'background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid var(--warning);';
+                    return `
+                        <tr style="font-size: 0.85rem;">
+                            <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: left;"><strong>${vis.categoria}</strong></td>
+                            <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: center;">${vis.data}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: center;">
+                                <span style="padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; ${badgeStyle}">${vis.status}</span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('') || '<tr><td colspan="3" style="padding: 10px; color: var(--text-light); text-align: center; font-size: 0.85rem;">Nenhuma visita registrada</td></tr>';
+
+                Swal.fire({
+                    title: `<div style="text-align: left; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                                <h3 style="margin:0; color: var(--primary); font-size: 1.3rem; font-family: 'Outfit', sans-serif;">${data.razao_social}</h3>
+                                <small style="color: var(--text-light); font-size: 0.8rem; font-weight: 400;">CNPJ: ${data.cnpj}</small>
+                            </div>`,
+                    html: `
+                        <div style="max-height: 50vh; overflow-y: auto; text-align: left; font-family: 'Outfit', sans-serif; padding-right: 5px;">
+                            <div style="margin-bottom: 15px; margin-top: 10px;">
+                                <h4 style="color: var(--secondary); margin-bottom: 5px; font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Informações de Contato</h4>
+                                <div style="font-size: 0.85rem;"><strong>Endereço:</strong> ${data.endereco}</div>
+                                <div style="font-size: 0.85rem;"><strong>Telefone:</strong> ${data.telefone}</div>
+                                <div style="font-size: 0.85rem;"><strong>E-mail:</strong> ${data.email}</div>
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="color: var(--secondary); margin-bottom: 5px; font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Responsáveis Técnicos</h4>
+                                ${rtsHtml}
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="color: var(--secondary); margin-bottom: 5px; font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Documentação</h4>
+                                <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+                                    <thead>
+                                        <tr style="background: #f8fafc; font-size: 0.75rem; text-transform: uppercase;">
+                                            <th style="padding: 6px 8px; text-align: left;">Tipo</th>
+                                            <th style="padding: 6px 8px; text-align: center;">Emissão</th>
+                                            <th style="padding: 6px 8px; text-align: center;">Vencimento</th>
+                                            <th style="padding: 6px 8px; text-align: center;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${docsHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div>
+                                <h4 style="color: var(--secondary); margin-bottom: 5px; font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Histórico de Visitas</h4>
+                                <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+                                    <thead>
+                                        <tr style="background: #f8fafc; font-size: 0.75rem; text-transform: uppercase;">
+                                            <th style="padding: 6px 8px; text-align: left;">Motivo/Cat</th>
+                                            <th style="padding: 6px 8px; text-align: center;">Data agendada</th>
+                                            <th style="padding: 6px 8px; text-align: center;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${visitasHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `,
+                    width: '600px',
+                    confirmButtonColor: 'var(--primary)',
+                    confirmButtonText: 'Fechar'
+                });
+            })
+            .catch(err => {
+                Swal.fire('Erro', 'Não foi possível carregar os detalhes desta empresa.', 'error');
+            });
     }
 </script>
 {% endblock %}

@@ -21,10 +21,15 @@
         display: flex;
         align-items: center;
         gap: 20px;
-        transition: transform 0.2s;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
     }
     .stat-card:hover {
         transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        border-color: var(--accent);
     }
     .stat-icon {
         width: 60px;
@@ -49,6 +54,27 @@
         font-size: 0.9rem;
         font-weight: 500;
     }
+
+    .alert-danger {
+        background: rgba(239, 68, 68, 0.08);
+        border-color: var(--danger);
+        color: #b91c1c;
+    }
+    .alert-warning {
+        background: rgba(245, 158, 11, 0.08);
+        border-color: var(--warning);
+        color: #b45309;
+    }
+    .alert-info {
+        background: rgba(67, 97, 238, 0.08);
+        border-color: var(--accent);
+        color: #1e3a8a;
+    }
+    .alert-success {
+        background: rgba(16, 185, 129, 0.08);
+        border-color: var(--success);
+        color: #065f46;
+    }
 </style>
 {% endblock %}
 
@@ -59,7 +85,7 @@
 </div>
 
 <div class="dashboard-grid">
-    <div class="stat-card">
+    <a href="{% url 'empresa_list' %}" class="stat-card">
         <div class="stat-icon icon-primary">
             <i class='bx bx-buildings'></i>
         </div>
@@ -67,9 +93,9 @@
             <h3>{{ total_empresas }}</h3>
             <p>Empresas Cadastradas</p>
         </div>
-    </div>
+    </a>
     
-    <div class="stat-card">
+    <a href="{% url 'visita_list' %}?status=pendente" class="stat-card">
         <div class="stat-icon icon-warning">
             <i class='bx bx-calendar-exclamation'></i>
         </div>
@@ -77,9 +103,9 @@
             <h3>{{ visitas_pendentes }}</h3>
             <p>Visitas Programadas</p>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card">
+    <a href="{% url 'documento_list' %}?status=regular" class="stat-card">
         <div class="stat-icon icon-success">
             <i class='bx bx-check-shield'></i>
         </div>
@@ -87,9 +113,9 @@
             <h3>{{ docs_regulares }}</h3>
             <p>Documentos Regulares</p>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card">
+    <a href="{% url 'documento_list' %}?status=vencido" class="stat-card">
         <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
             <i class='bx bx-error-alt'></i>
         </div>
@@ -97,6 +123,207 @@
             <h3>{{ docs_vencidos }}</h3>
             <p>Documentos Vencidos</p>
         </div>
+    </a>
+</div>
+
+<div class="dashboard-grid-two" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-top: 30px;">
+    <!-- Card do Gráfico -->
+    <div class="card" style="margin: 0; min-height: 400px; display: flex; flex-direction: column;">
+        <h3 style="color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+            <i class='bx bx-bar-chart-alt-2' style="font-size: 1.5rem;"></i> Visitas Técnicas por Mês
+        </h3>
+        <div style="position: relative; flex: 1; min-height: 280px; width: 100%;">
+            <canvas id="visitasChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Central de Alertas -->
+    <div class="card" style="margin: 0; display: flex; flex-direction: column;">
+        <h3 style="color: var(--primary); margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <i class='bx bx-bell' style="font-size: 1.5rem;"></i> Central de Alertas e Notificações
+        </h3>
+        
+        <!-- Tab Navigation Buttons -->
+        <div class="tab-nav" style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <button class="tab-btn active" onclick="switchTab('docs')" id="tabBtnDocs" style="background: none; border: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; color: var(--accent); border-bottom: 2px solid var(--accent); cursor: pointer; transition: all 0.2s; outline: none; font-family: inherit;">
+                <i class='bx bx-file' style="margin-right: 5px;"></i> Documentos Vencendo ({% if alertas %}{{ alertas|length }}{% else %}0{% endif %})
+            </button>
+            <button class="tab-btn" onclick="switchTab('visitas')" id="tabBtnVisitas" style="background: none; border: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; color: var(--text-light); border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; outline: none; font-family: inherit;">
+                <i class='bx bx-calendar' style="margin-right: 5px;"></i> Próximas Visitas ({% if visitas_alertas %}{{ visitas_alertas|length }}{% else %}0{% endif %})
+            </button>
+        </div>
+        
+        <!-- Document Alerts Tab Content -->
+        <div id="tabDocsContent" class="tab-content" style="display: block;">
+            {% if alertas %}
+            <div class="alerts-container" style="display: flex; flex-direction: column; gap: 15px; max-height: 280px; overflow-y: auto; padding-right: 5px;">
+                {% for alerta in alertas %}
+                <div class="alert-item alert-{{ alerta.classe }}" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-radius: 8px; border-left: 5px solid; transition: all 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 12px; text-align: left;">
+                        {% if alerta.classe == 'danger' %}
+                        <i class='bx bx-error' style="font-size: 1.3rem;"></i>
+                        {% else %}
+                        <i class='bx bx-info-circle' style="font-size: 1.3rem;"></i>
+                        {% endif %}
+                        <div>
+                            <div style="font-size: 0.9rem; line-height: 1.3;">O documento <strong>"{{ alerta.descricao }}"</strong> da empresa <strong>"{{ alerta.empresa }}"</strong> está próximo do vencimento!</div>
+                            <div style="font-size: 0.8rem; margin-top: 3px; opacity: 0.8;">Vence em {{ alerta.data_vencimento }} (Faltam {{ alerta.dias_restantes }} dias)</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'documento_list' %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; background: white; white-space: nowrap; margin-left: 10px;">
+                        Visualizar
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 40px 30px; color: var(--text-light); flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <i class='bx bx-check-double' style="font-size: 2.5rem; color: var(--success); margin-bottom: 10px;"></i>
+                <h4>Tudo em conformidade!</h4>
+                <p style="font-size: 0.85rem;">Nenhum documento próximo do vencimento nos próximos 30 dias.</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Visits Alerts Tab Content -->
+        <div id="tabVisitasContent" class="tab-content" style="display: none;">
+            {% if visitas_alertas %}
+            <div class="alerts-container" style="display: flex; flex-direction: column; gap: 15px; max-height: 280px; overflow-y: auto; padding-right: 5px;">
+                {% for vis in visitas_alertas %}
+                <div class="alert-item alert-{{ vis.classe }}" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-radius: 8px; border-left: 5px solid; transition: all 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 12px; text-align: left;">
+                        {% if vis.classe == 'danger' %}
+                        <i class='bx bx-calendar-x' style="font-size: 1.3rem;"></i>
+                        {% elif vis.classe == 'warning' %}
+                        <i class='bx bx-bell' style="font-size: 1.3rem;"></i>
+                        {% elif vis.classe == 'info' %}
+                        <i class='bx bx-calendar-event' style="font-size: 1.3rem;"></i>
+                        {% else %}
+                        <i class='bx bx-calendar' style="font-size: 1.3rem;"></i>
+                        {% endif %}
+                        <div>
+                            <div style="font-size: 0.9rem; line-height: 1.3;">Visita de <strong>"{{ vis.categoria }}"</strong> para a empresa <strong>"{{ vis.empresa }}"</strong></div>
+                            <div style="font-size: 0.8rem; margin-top: 3px; opacity: 0.8;">Agendado: {{ vis.data }} (<strong>{{ vis.desc_tempo }}</strong>)</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'visita_list' %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; background: white; white-space: nowrap; margin-left: 10px;">
+                        Visualizar
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 40px 30px; color: var(--text-light); flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <i class='bx bx-calendar-check' style="font-size: 2.5rem; color: var(--success); margin-bottom: 10px;"></i>
+                <h4>Nenhum agendamento pendente</h4>
+                <p style="font-size: 0.85rem;">Todas as visitas técnicas já foram concluídas ou não há visitas agendadas.</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const canvas = document.getElementById('visitasChart');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Gradiente premium para as barras
+        let gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(67, 97, 238, 0.85)');
+        gradient.addColorStop(1, 'rgba(67, 97, 238, 0.15)');
+        
+        const labels = {{ chart_labels|safe }};
+        const data = {{ chart_data|safe }};
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Visitas Agendadas',
+                    data: data,
+                    backgroundColor: gradient,
+                    borderColor: 'rgba(67, 97, 238, 1)',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Outfit', size: 13 },
+                        bodyFont: { family: 'Outfit', size: 13 },
+                        padding: 10,
+                        cornerRadius: 6,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            stepSize: 1,
+                            font: { family: 'Outfit', size: 11 }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { family: 'Outfit', size: 11 }
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+    function switchTab(tab) {
+        const btnDocs = document.getElementById('tabBtnDocs');
+        const btnVisitas = document.getElementById('tabBtnVisitas');
+        const contentDocs = document.getElementById('tabDocsContent');
+        const contentVisitas = document.getElementById('tabVisitasContent');
+        
+        if (tab === 'docs') {
+            btnDocs.classList.add('active');
+            btnDocs.style.color = 'var(--accent)';
+            btnDocs.style.borderBottomColor = 'var(--accent)';
+            
+            btnVisitas.classList.remove('active');
+            btnVisitas.style.color = 'var(--text-light)';
+            btnVisitas.style.borderBottomColor = 'transparent';
+            
+            contentDocs.style.display = 'block';
+            contentVisitas.style.display = 'none';
+        } else {
+            btnVisitas.classList.add('active');
+            btnVisitas.style.color = 'var(--accent)';
+            btnVisitas.style.borderBottomColor = 'var(--accent)';
+            
+            btnDocs.classList.remove('active');
+            btnDocs.style.color = 'var(--text-light)';
+            btnDocs.style.borderBottomColor = 'transparent';
+            
+            contentVisitas.style.display = 'block';
+            contentDocs.style.display = 'none';
+        }
+    }
+</script>
 {% endblock %}
