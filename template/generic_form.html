@@ -77,9 +77,47 @@
     }
     
     .django-form input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        margin-top: 5px;
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
+    /* Estilo para CheckboxSelectMultiple (lista de empresas no formulário de RT) */
+    .django-form ul {
+        list-style: none;
+        padding: 12px;
+        margin: 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .django-form ul li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        transition: background 0.15s;
+        cursor: pointer;
+    }
+
+    .django-form ul li:hover {
+        background: rgba(67, 97, 238, 0.07);
+    }
+
+    .django-form ul li label {
+        cursor: pointer;
+        font-weight: 400;
+        color: var(--text-dark);
+        font-size: 0.95rem;
+        margin: 0;
     }
 </style>
 {% endblock %}
@@ -227,6 +265,56 @@ document.addEventListener('DOMContentLoaded', function() {
             if (cnpjInput) cnpjInput.value = cnpjInput.value.replace(/\D/g, '');
             if (telInput) telInput.value = telInput.value.replace(/\D/g, '');
         });
+    }
+
+    // Dynamic filtering of document types based on selected company
+    const empresaSelect = document.getElementById('id_empresa');
+    const tipoSelect = document.getElementById('id_tipo');
+
+    // Pre-fill company if passed in query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const empresaParam = urlParams.get('empresa');
+    if (empresaSelect && empresaParam) {
+        empresaSelect.value = empresaParam;
+    }
+
+    if (empresaSelect && tipoSelect) {
+        function updateDocumentTypes() {
+            const empresaId = empresaSelect.value;
+            if (!empresaId) {
+                tipoSelect.innerHTML = '<option value="">-- Selecione uma empresa primeiro --</option>';
+                return;
+            }
+            const currentTipoValue = tipoSelect.getAttribute('data-initial-val') || tipoSelect.value;
+            fetch(`/api/empresa/${empresaId}/documentos-permitidos/`)
+                .then(res => res.json())
+                .then(data => {
+                    tipoSelect.innerHTML = '<option value="">---------</option>';
+                    data.document_types.forEach(tipo => {
+                        const option = document.createElement('option');
+                        option.value = tipo.id;
+                        option.textContent = tipo.descricao;
+                        if (tipo.id == currentTipoValue) {
+                            option.selected = true;
+                        }
+                        tipoSelect.appendChild(option);
+                    });
+                });
+        }
+
+        // Save initial value to attribute
+        tipoSelect.setAttribute('data-initial-val', tipoSelect.value);
+
+        empresaSelect.addEventListener('change', updateDocumentTypes);
+        // Se empresa já está selecionada (carregamento da página ou pré-preenchimento), dispara o filtro
+        if (empresaSelect.value) {
+            updateDocumentTypes();
+        }
+    }
+
+    // Se empresa foi pré-preenchida via query param, dispara change para atualizar filtros dependentes
+    if (empresaSelect && empresaParam) {
+        empresaSelect.dispatchEvent(new Event('change'));
     }
 
     // Dynamic Searchable Dropdowns (Lupa) para campos do tipo select

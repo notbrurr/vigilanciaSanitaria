@@ -305,8 +305,13 @@
         <!-- Topbar -->
         <header class="topbar">
             <div class="page-title">{% block page_title %}Sistema de Gestão{% endblock %}</div>
-            <div class="user-profile">
+            <div class="user-profile" style="display: flex; align-items: center; gap: 15px;">
                 <span class="user-name">Olá, {{ user.username|default:"Admin" }}</span>
+                {% if user.is_staff or user.is_superuser %}
+                <a href="{% url 'user_list' %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; background: rgba(67, 97, 238, 0.1); color: var(--accent); border: 1px solid rgba(67, 97, 238, 0.2);">
+                    <i class='bx bx-user'></i> Gerenciar Usuários
+                </a>
+                {% endif %}
                 <form method="post" action="{% url 'logout' %}" style="display:inline;">
                     {% csrf_token %}
                     <button type="submit" class="logout-btn">

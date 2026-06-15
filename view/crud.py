@@ -3,16 +3,22 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from model.models import Empresa, ResponsavelTecnico, TipoDocumento, CategoriaVisita, Documento, Visita, Colaborador, NecessidadeDocumento
+from model.models import Empresa, ResponsavelTecnico, TipoDocumento, CategoriaVisita, Documento, Visita, Colaborador, NecessidadeDocumento, User
 
 MODELS_TO_CRUD = [
     Empresa, ResponsavelTecnico, TipoDocumento, CategoriaVisita, 
-    Documento, Visita, Colaborador, NecessidadeDocumento
+    Documento, Visita, Colaborador, NecessidadeDocumento, User
 ]
 
 class GenericListView(LoginRequiredMixin, ListView):
     template_name = 'generic_list.html'
     
+    def dispatch(self, request, *args, **kwargs):
+        if self.model == User and not (request.user.is_staff or request.user.is_superuser):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = super().get_queryset()
         status = self.request.GET.get('status')
@@ -58,9 +64,13 @@ class GenericListView(LoginRequiredMixin, ListView):
         context['headers'] = [f.verbose_name.title() if hasattr(f, 'verbose_name') else f.name for f in fields]
         
         show_extra_companies = False
+        show_rt_empresas = False
         if self.model in [TipoDocumento, CategoriaVisita]:
             show_extra_companies = True
             context['headers'].append("Empresas Relacionadas")
+        if self.model == ResponsavelTecnico:
+            show_rt_empresas = True
+            context['headers'].append("Empresas sob Responsabilidade")
             
         rows = []
         for obj in context['object_list']:
@@ -87,7 +97,10 @@ class GenericListView(LoginRequiredMixin, ListView):
                     'value': str_val,
                     'is_long': is_long_text,
                     'is_file': is_file,
-                    'file_url': url_val
+                    'file_url': url_val,
+                    'is_bool': isinstance(val, bool),
+                    'bool_val': val if isinstance(val, bool) else None,
+                    'field_name': f.name,
                 })
                 
             if show_extra_companies:
@@ -102,7 +115,23 @@ class GenericListView(LoginRequiredMixin, ListView):
                     'value': val_str,
                     'is_long': len(val_str) > 50,
                     'is_file': False,
-                    'file_url': ''
+                    'file_url': '',
+                    'is_bool': False,
+                    'bool_val': None,
+                    'field_name': '',
+                })
+
+            if show_rt_empresas:
+                empresas_do_rt = obj.empresas.all()
+                val_str = ", ".join([emp.razao_social for emp in empresas_do_rt]) if empresas_do_rt.exists() else "Nenhuma"
+                row.append({
+                    'value': val_str,
+                    'is_long': len(val_str) > 50,
+                    'is_file': False,
+                    'file_url': '',
+                    'is_bool': False,
+                    'bool_val': None,
+                    'field_name': '',
                 })
                 
             rows.append({'obj': obj, 'cells': row})
@@ -111,7 +140,29 @@ class GenericListView(LoginRequiredMixin, ListView):
 
 class GenericCreateView(LoginRequiredMixin, CreateView):
     template_name = 'generic_form.html'
-    fields = '__all__'
+    
+    def dispatch(self, request, *args, **kwargs):
+        if self.model == User and not (request.user.is_staff or request.user.is_superuser):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_class(self):
+        from view.forms import UserForm, ResponsavelTecnicoForm, NecessidadeDocumentoForm, DocumentoForm
+        forms_map = {
+            User: UserForm,
+            ResponsavelTecnico: ResponsavelTecnicoForm,
+            NecessidadeDocumento: NecessidadeDocumentoForm,
+            Documento: DocumentoForm,
+        }
+        if self.model in forms_map:
+            return forms_map[self.model]
+        from django import forms
+        class DynamicForm(forms.ModelForm):
+            class Meta:
+                model = self.model
+                fields = '__all__'
+        return DynamicForm
     
     def get_success_url(self):
         return reverse_lazy(f"{self.model._meta.model_name}_list")
@@ -124,7 +175,29 @@ class GenericCreateView(LoginRequiredMixin, CreateView):
 
 class GenericUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'generic_form.html'
-    fields = '__all__'
+    
+    def dispatch(self, request, *args, **kwargs):
+        if self.model == User and not (request.user.is_staff or request.user.is_superuser):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_class(self):
+        from view.forms import UserForm, ResponsavelTecnicoForm, NecessidadeDocumentoForm, DocumentoForm
+        forms_map = {
+            User: UserForm,
+            ResponsavelTecnico: ResponsavelTecnicoForm,
+            NecessidadeDocumento: NecessidadeDocumentoForm,
+            Documento: DocumentoForm,
+        }
+        if self.model in forms_map:
+            return forms_map[self.model]
+        from django import forms
+        class DynamicForm(forms.ModelForm):
+            class Meta:
+                model = self.model
+                fields = '__all__'
+        return DynamicForm
     
     def get_success_url(self):
         return reverse_lazy(f"{self.model._meta.model_name}_list")
@@ -137,6 +210,12 @@ class GenericUpdateView(LoginRequiredMixin, UpdateView):
 
 class GenericDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'generic_confirm_delete.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        if self.model == User and not (request.user.is_staff or request.user.is_superuser):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
     
     def get_success_url(self):
         return reverse_lazy(f"{self.model._meta.model_name}_list")

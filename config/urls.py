@@ -21,7 +21,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from view.auth import AuthView, home_view
 from view.crud import get_crud_urls
-from view.api_views import validate_document_view, empresa_details_view
+from view.api_views import validate_document_view, empresa_details_view, empresa_allowed_documents_view, empresa_painel_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,6 +29,8 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
     path('api/validate/', validate_document_view, name='api_validate'),
     path('api/empresa/<int:pk>/detalhes/', empresa_details_view, name='api_empresa_detalhes'),
+    path('api/empresa/<int:pk>/documentos-permitidos/', empresa_allowed_documents_view, name='api_empresa_documentos_permitidos'),
+    path('empresa/<int:pk>/painel/', empresa_painel_view, name='empresa_painel'),
     path('', home_view, name='home'),
 ] + get_crud_urls()
 

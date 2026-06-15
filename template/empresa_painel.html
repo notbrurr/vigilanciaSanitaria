@@ -1,0 +1,489 @@
+{% extends 'base.html' %}
+
+{% block title %}Painel de Controle - {{ empresa.razao_social }} - Gestão de Conformidade{% endblock %}
+
+{% block page_title %}Painel da Empresa{% endblock %}
+
+{% block extra_css %}
+<style>
+    .painel-grid {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 25px;
+        align-items: start;
+    }
+    
+    @media(max-width: 992px) {
+        .painel-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .info-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 24px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    
+    .info-group {
+        margin-bottom: 15px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .info-group:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--text-light);
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .info-value {
+        font-size: 0.95rem;
+        color: var(--text-dark);
+        font-weight: 500;
+        word-break: break-all;
+    }
+
+    .rt-badge {
+        background: rgba(67, 97, 238, 0.08);
+        border: 1px solid rgba(67, 97, 238, 0.2);
+        color: var(--accent);
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 5px;
+    }
+    
+    .panel-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+    
+    .section-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 24px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+        border-bottom: 2px solid #f1f5f9;
+        padding-bottom: 10px;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    th, td {
+        padding: 12px 14px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.9rem;
+    }
+    
+    th {
+        background-color: #f8fafc;
+        color: var(--text-light);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    tbody tr:hover {
+        background-color: #f8fafc;
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-regular {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .status-vencido {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .status-faltando {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .status-pendente {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    
+    .filter-active-bar {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.15);
+        color: var(--danger);
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <div>
+        <h2 style="color: var(--primary); font-size: 1.6rem; margin-bottom: 4px;">{{ empresa.razao_social }}</h2>
+        <span style="color: var(--text-light); font-size: 0.9rem;">CNPJ: {{ empresa.cnpj }}</span>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        {% if filtro == 'vencido' %}
+        <a href="?filtro=" class="btn btn-secondary">
+            <i class='bx bx-filter-alt'></i> Mostrar Tudo
+        </a>
+        {% else %}
+        <a href="?filtro=vencido" class="btn btn-danger" style="box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);">
+            <i class='bx bx-filter-alt'></i> Filtrar Apenas Vencidos
+        </a>
+        {% endif %}
+        <a href="{% url 'empresa_list' %}" class="btn btn-secondary">
+            <i class='bx bx-arrow-back'></i> Voltar
+        </a>
+    </div>
+</div>
+
+{% if filtro == 'vencido' %}
+<div class="filter-active-bar">
+    <span><i class='bx bx-info-circle'></i> Visualizando apenas pendências e registros vencidos desta empresa.</span>
+    <a href="?filtro=" style="color: var(--danger); font-weight: 600; text-decoration: underline;">Limpar Filtro</a>
+</div>
+{% endif %}
+
+<div class="painel-grid">
+    <!-- Lateral: Informações da Empresa -->
+    <div class="info-card">
+        <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
+            <i class='bx bx-info-circle'></i> Dados Cadastrais
+        </h3>
+        
+        <div class="info-group">
+            <div class="info-label">Razão Social</div>
+            <div class="info-value">{{ empresa.razao_social }}</div>
+        </div>
+        
+        {% if empresa.nome_fantasia %}
+        <div class="info-group">
+            <div class="info-label">Nome Fantasia</div>
+            <div class="info-value">{{ empresa.nome_fantasia }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="info-group">
+            <div class="info-label">CNPJ</div>
+            <div class="info-value">{{ empresa.cnpj }}</div>
+        </div>
+        
+        <div class="info-group">
+            <div class="info-label">Endereço</div>
+            <div class="info-value">{{ empresa.endereco }}</div>
+        </div>
+        
+        <div class="info-group">
+            <div class="info-label">Telefone</div>
+            <div class="info-value">{{ empresa.telefone|default:"Não informado" }}</div>
+        </div>
+        
+        <div class="info-group">
+            <div class="info-label">E-mail</div>
+            <div class="info-value">{{ empresa.email|default:"Não informado" }}</div>
+        </div>
+        
+        <div class="info-group">
+            <div class="info-label">Responsável Técnico</div>
+            {% if empresa.responsavel_tecnico %}
+            <div class="rt-badge">
+                <i class='bx bx-user-check'></i>
+                <div>
+                    <strong>{{ empresa.responsavel_tecnico.nome }}</strong>
+                    <br>
+                    <small style="opacity: 0.85;">{{ empresa.responsavel_tecnico.conselho_classe }}: {{ empresa.responsavel_tecnico.numero_registro }}</small>
+                </div>
+            </div>
+            {% else %}
+            <div class="info-value" style="color: var(--danger); font-style: italic;">Nenhum associado</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Principal: Histórico e Listas -->
+    <div class="panel-sections">
+        
+        <!-- Documentos -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class='bx bx-folder-open'></i> Histórico de Documentos
+                </div>
+                <a href="{% url 'documento_create' %}?empresa={{ empresa.id }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;">
+                    <i class='bx bx-plus'></i> Novo Documento
+                </a>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Responsável Técnico</th>
+                            <th>Emissão</th>
+                            <th>Vencimento</th>
+                            <th style="text-align: center;">Arquivo</th>
+                            <th style="text-align: center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Documentos Faltantes -->
+                        {% for item in missing_required %}
+                        <tr>
+                            <td><strong>{{ item.tipo.descricao }}</strong></td>
+                            <td><span style="color: var(--text-light); font-style: italic;">-</span></td>
+                            <td><span style="color: var(--text-light); font-style: italic;">-</span></td>
+                            <td><span style="color: var(--text-light); font-style: italic;">-</span></td>
+                            <td style="text-align: center;"><span style="color: var(--text-light); font-size: 0.85rem;">-</span></td>
+                            <td style="text-align: center;">
+                                <span class="status-badge status-faltando">
+                                    <i class='bx bx-error-circle'></i> Faltando
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        {% endfor %}
+                        
+                        <!-- Documentos Enviados -->
+                        {% for doc in documentos %}
+                        <tr>
+                            <td><strong>{{ doc.tipo.descricao }}</strong></td>
+                            <td>
+                                {% if doc.responsavel_tecnico %}
+                                {{ doc.responsavel_tecnico.nome }}
+                                {% else %}
+                                <span style="color: var(--text-light); font-style: italic;">Não informado</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ doc.data_emissao|date:"d/m/Y" }}</td>
+                            <td>{{ doc.data_vencimento|date:"d/m/Y"|default:"Sem validade" }}</td>
+                            <td style="text-align: center;">
+                                {% if doc.arquivo %}
+                                <a href="{{ doc.arquivo.url }}" target="_blank" class="btn-icon" style="background: var(--success); display: inline-flex; width: 28px; height: 28px; border-radius: 4px;" title="Visualizar Arquivo">
+                                    <i class='bx bx-file' style="font-size: 1rem;"></i>
+                                </a>
+                                {% else %}
+                                <span style="color: var(--text-light); font-size: 0.85rem;">Sem anexo</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center;">
+                                {% if doc.data_vencimento and doc.data_vencimento < hoje %}
+                                <span class="status-badge status-vencido">
+                                    <i class='bx bx-x-circle'></i> Vencido
+                                </span>
+                                {% else %}
+                                <span class="status-badge status-regular">
+                                    <i class='bx bx-check-circle'></i> Regular
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                            {% if not missing_required %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-light); padding: 20px;">
+                                    Nenhum documento encontrado.
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Colaboradores -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class='bx bx-group'></i> Colaboradores
+                </div>
+                <a href="{% url 'colaborador_create' %}?empresa={{ empresa.id }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;">
+                    <i class='bx bx-plus'></i> Novo Colaborador
+                </a>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Data de Entrada</th>
+                            <th>Data de Vencimento (1 Ano)</th>
+                            <th style="text-align: center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for col in colaboradores %}
+                        <tr>
+                            <td><strong>{{ col.nome }}</strong></td>
+                            <td class="cpf-mask">{{ col.cpf }}</td>
+                            <td>{{ col.data_entrada|date:"d/m/Y" }}</td>
+                            <td>{{ col.data_vencimento|date:"d/m/Y"|default:"-" }}</td>
+                            <td style="text-align: center;">
+                                {% if not col.ativo %}
+                                <span class="status-badge status-faltando" style="background: rgba(107, 114, 128, 0.1); color: var(--text-light); border-color: rgba(107, 114, 128, 0.2);">
+                                    Inativo
+                                </span>
+                                {% elif col.data_vencimento and col.data_vencimento < hoje %}
+                                <span class="status-badge status-vencido">
+                                    <i class='bx bx-x-circle'></i> ASO Vencido
+                                </span>
+                                {% else %}
+                                <span class="status-badge status-regular">
+                                    <i class='bx bx-check-circle'></i> Ativo (Em Dia)
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-light); padding: 20px;">
+                                Nenhum colaborador cadastrado.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Visitas Técnicas -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class='bx bx-calendar-check'></i> Histórico de Visitas
+                </div>
+                <a href="{% url 'visita_create' %}?empresa={{ empresa.id }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;">
+                    <i class='bx bx-calendar-plus'></i> Agendar Visita
+                </a>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Categoria</th>
+                            <th>Fiscal</th>
+                            <th>Responsável Técnico (Época)</th>
+                            <th>Data Agendada</th>
+                            <th>Data Realização</th>
+                            <th style="text-align: center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vis in visitas %}
+                        <tr>
+                            <td><strong>{{ vis.categoria.descricao }}</strong></td>
+                            <td>{{ vis.fiscal.username }}</td>
+                            <td>{{ vis.responsavel_tecnico.nome|default:"Não informado" }}</td>
+                            <td>{{ vis.data_agendamento|date:"d/m/Y H:i" }}</td>
+                            <td>{{ vis.data_realizacao|date:"d/m/Y H:i"|default:"-" }}</td>
+                            <td style="text-align: center;">
+                                {% if vis.realizada %}
+                                <span class="status-badge status-regular">
+                                    <i class='bx bx-check-double'></i> Realizada
+                                </span>
+                                {% else %}
+                                    {% if vis.data_agendamento.date < hoje %}
+                                    <span class="status-badge status-vencido">
+                                        <i class='bx bx-alarm-exclamation'></i> Atrasada
+                                    </span>
+                                    {% else %}
+                                    <span class="status-badge status-pendente">
+                                        <i class='bx bx-time-five'></i> Pendente
+                                    </span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-light); padding: 20px;">
+                                Nenhuma visita cadastrada.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/imask"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.cpf-mask').forEach(el => {
+            const val = el.textContent.replace(/\D/g, '');
+            if (val.length === 11) {
+                el.textContent = val.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -16,30 +16,34 @@ admin.site.register(User, UserAdmin)
 # ==================== EMPRESA ====================
 @admin.register(Empresa)
 class EmpresaAdmin(admin.ModelAdmin):
-    list_display = ('razao_social', 'nome_fantasia', 'cnpj', 'telefone', 'email', 'usuario')
+    list_display = ('razao_social', 'nome_fantasia', 'cnpj', 'telefone', 'email', 'responsavel_tecnico')
     search_fields = ('razao_social', 'nome_fantasia', 'cnpj')
     ordering = ('razao_social',)
     
     # Campos que vão aparecer na tela de cadastro/edição
     fields = ('razao_social', 'nome_fantasia', 'cnpj', 'telefone', 
-              'email', 'endereco', 'usuario')
+              'email', 'endereco', 'responsavel_tecnico')
 
 
 # ==================== RESPONSÁVEL TÉCNICO ====================
 @admin.register(ResponsavelTecnico)
 class ResponsavelTecnicoAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'cpf', 'conselho_classe', 'numero_registro', 'empresa')
+    list_display = ('nome', 'cpf', 'conselho_classe', 'numero_registro', 'get_empresas')
     search_fields = ('nome', 'cpf', 'numero_registro')
-    list_filter = ('conselho_classe', 'empresa')
+    list_filter = ('conselho_classe',)
     ordering = ('nome',)
+
+    def get_empresas(self, obj):
+        return ", ".join([emp.razao_social for emp in obj.empresas.all()])
+    get_empresas.short_description = "Empresas sob Responsabilidade"
 
 
 # ==================== TIPO DE DOCUMENTO ====================
 @admin.register(TipoDocumento)
 class TipoDocumentoAdmin(admin.ModelAdmin):
-    list_display = ('descricao', 'validade_meses')
+    list_display = ('descricao', 'validade_meses', 'obrigatorio')
     search_fields = ('descricao',)
-    list_filter = ('validade_meses',)
+    list_filter = ('validade_meses', 'obrigatorio')
 
 
 # ==================== CATEGORIA DE VISITA ====================
@@ -52,8 +56,8 @@ class CategoriaVisitaAdmin(admin.ModelAdmin):
 # ==================== DOCUMENTO ====================
 @admin.register(Documento)
 class DocumentoAdmin(admin.ModelAdmin):
-    list_display = ('empresa', 'tipo', 'data_emissao', 'data_vencimento')
-    list_filter = ('tipo', 'data_emissao')
+    list_display = ('empresa', 'tipo', 'responsavel_tecnico', 'data_emissao', 'data_vencimento')
+    list_filter = ('tipo', 'responsavel_tecnico', 'data_emissao')
     search_fields = ('empresa__razao_social', 'empresa__cnpj')
     date_hierarchy = 'data_emissao'
 
