@@ -13,7 +13,10 @@ def add_months(sourcedate, months):
 class User(AbstractUser):
     # O C4 Model menciona UserModel com idUsuario, username, passwordHash
     # O AbstractUser do Django já possui id, username e password.
-    pass
+
+    class Meta(AbstractUser.Meta):
+        verbose_name = "Usuário"
+        verbose_name_plural = "Usuários"
 
 class Empresa(models.Model):
     cnpj = models.CharField(max_length=20, unique=True, verbose_name="CNPJ")
@@ -22,7 +25,7 @@ class Empresa(models.Model):
     endereco = models.CharField(max_length=255, verbose_name="Endereço")
     telefone = models.CharField(max_length=20, verbose_name="Telefone", blank=True, null=True)
     email = models.EmailField(verbose_name="E-mail", blank=True, null=True)
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='empresas', verbose_name="Usuário Representante")
+    responsavel_tecnico = models.ForeignKey('ResponsavelTecnico', on_delete=models.SET_NULL, null=True, blank=True, related_name='empresas', verbose_name="Responsável Técnico")
 
     def __str__(self):
         return f"{self.razao_social} ({self.cnpj})"
@@ -36,7 +39,6 @@ class ResponsavelTecnico(models.Model):
     cpf = models.CharField(max_length=11, unique=True, verbose_name="CPF")
     conselho_classe = models.CharField(max_length=50, verbose_name="Conselho de Classe (Ex: CRM, CRF)")
     numero_registro = models.CharField(max_length=50, verbose_name="Número de Registro")
-    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='responsaveis_tecnicos', verbose_name="Empresa")
 
     def __str__(self):
         return f"{self.nome} - {self.conselho_classe} {self.numero_registro}"
@@ -48,6 +50,7 @@ class ResponsavelTecnico(models.Model):
 class TipoDocumento(models.Model):
     descricao = models.CharField(max_length=100, verbose_name="Descrição")
     validade_meses = models.IntegerField(blank=True, null=True, verbose_name="Validade Padrão (meses)")
+    obrigatorio = models.BooleanField(default=False, verbose_name="Obrigatório")
 
     def __str__(self):
         return self.descricao
@@ -78,6 +81,7 @@ class Documento(models.Model):
     data_emissao = models.DateField(verbose_name="Data de Emissão")
     data_vencimento = models.DateField(blank=True, null=True, verbose_name="Data de Vencimento")
     arquivo = models.FileField(upload_to='documentos/', blank=True, null=True, verbose_name="Arquivo Anexo")
+    responsavel_tecnico = models.ForeignKey('ResponsavelTecnico', on_delete=models.SET_NULL, null=True, blank=True, related_name='documentos', verbose_name="Responsável Técnico")
 
     def save(self, *args, **kwargs):
         if not self.data_vencimento and self.tipo.validade_meses and self.data_emissao:
@@ -103,9 +107,7 @@ class Visita(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.responsavel_tecnico and self.empresa:
-            rt = self.empresa.responsaveis_tecnicos.first()
-            if rt:
-                self.responsavel_tecnico = rt
+            self.responsavel_tecnico = self.empresa.responsavel_tecnico
         super().save(*args, **kwargs)
 
     def __str__(self):

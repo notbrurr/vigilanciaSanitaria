@@ -142,6 +142,16 @@
                         </button>
                         {% elif cell.is_long %}
                         <span style="color: var(--text-light); font-size: 0.8rem;">-</span>
+                        {% elif cell.is_bool %}
+                            {% if cell.bool_val %}
+                            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.25);">
+                                <i class='bx bx-check-circle' style="font-size: 0.9rem;"></i> Sim
+                            </span>
+                            {% else %}
+                            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; background: rgba(100, 116, 139, 0.1); color: var(--text-light); border: 1px solid rgba(100, 116, 139, 0.2);">
+                                <i class='bx bx-x-circle' style="font-size: 0.9rem;"></i> Não
+                            </span>
+                            {% endif %}
                         {% else %}
                         {{ cell.value }}
                         {% endif %}
@@ -150,9 +160,9 @@
                     <td>
                         <div class="actions" style="justify-content: center;">
                             {% if model_name == 'Empresa' %}
-                            <button type="button" class="btn-icon" style="background: var(--accent); border: none; cursor: pointer; display: inline-flex;" title="Exibir Detalhes" onclick="showCompanyDetails({{ row.obj.pk }})">
+                            <a href="{% url 'empresa_painel' row.obj.pk %}" class="btn-icon" style="background: var(--accent); display: inline-flex;" title="Painel Completo da Empresa">
                                 <i class='bx bx-show-alt'></i>
-                            </button>
+                            </a>
                             {% endif %}
                             <a href="{% url update_url_name row.obj.pk %}" class="btn-icon btn-edit" title="Editar">
                                 <i class='bx bx-edit-alt'></i>

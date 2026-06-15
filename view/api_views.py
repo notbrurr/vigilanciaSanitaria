@@ -40,7 +40,8 @@ def empresa_details_view(request, pk):
     hoje = timezone.now().date()
     
     responsaveis = []
-    for rt in empresa.responsaveis_tecnicos.all():
+    if empresa.responsavel_tecnico:
+        rt = empresa.responsavel_tecnico
         responsaveis.append({
             'nome': rt.nome,
             'conselho': rt.conselho_classe,
@@ -78,3 +79,71 @@ def empresa_details_view(request, pk):
         'visitas': visitas
     }
     return JsonResponse(data)
+
+@require_GET
+def empresa_allowed_documents_view(request, pk):
+    from django.db.models import Q
+    from model.models import TipoDocumento
+    empresa = get_object_or_404(Empresa, pk=pk)
+    tipos = TipoDocumento.objects.filter(
+        Q(obrigatorio=True) | Q(necessidades_documento__empresa=empresa)
+    ).distinct()
+    data = [{'id': t.id, 'descricao': t.descricao} for t in tipos]
+    return JsonResponse({'document_types': data})
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from model.models import Colaborador, TipoDocumento
+
+@login_required
+def empresa_painel_view(request, pk):
+    empresa = get_object_or_404(Empresa, pk=pk)
+    hoje = timezone.now().date()
+    
+    filtro = request.GET.get('filtro', '') # 'vencido' ou ''
+    
+    # Colaboradores
+    colaboradores = Colaborador.objects.filter(empresa=empresa)
+    if filtro == 'vencido':
+        colaboradores = colaboradores.filter(data_vencimento__lt=hoje, ativo=True)
+        
+    # Documentos
+    documentos = Documento.objects.filter(empresa=empresa).select_related('tipo', 'responsavel_tecnico')
+    if filtro == 'vencido':
+        documentos = documentos.filter(data_vencimento__lt=hoje)
+        
+    # Necessidades/Obrigatorios
+    from django.db.models import Q
+    required_types = TipoDocumento.objects.filter(
+        Q(obrigatorio=True) | Q(necessidades_documento__empresa=empresa)
+    ).distinct()
+    
+    # Documentos que estão faltando
+    uploaded_types = set(Documento.objects.filter(empresa=empresa).values_list('tipo_id', flat=True))
+    missing_required = []
+    
+    # Se filtro for 'vencido', só listamos os que estão realmente faltando ou vencidos
+    for rt in required_types:
+        if rt.id not in uploaded_types:
+            missing_required.append({
+                'tipo': rt,
+                'status': 'Faltando'
+            })
+            
+    # Visitas
+    visitas = Visita.objects.filter(empresa=empresa).select_related('categoria', 'fiscal', 'responsavel_tecnico')
+    if filtro == 'vencido':
+        # Visitas agendadas no passado e não realizadas
+        visitas = visitas.filter(realizada=False, data_agendamento__lt=timezone.now())
+        
+    context = {
+        'empresa': empresa,
+        'colaboradores': colaboradores,
+        'documentos': documentos,
+        'missing_required': missing_required,
+        'visitas': visitas,
+        'filtro': filtro,
+        'hoje': hoje,
+    }
+    return render(request, 'empresa_painel.html', context)
+
