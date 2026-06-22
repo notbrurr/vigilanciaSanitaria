@@ -136,6 +136,8 @@
                             {% else %}
                             <span style="color: var(--text-light); font-size: 0.85rem;">Sem anexo</span>
                             {% endif %}
+                        {% elif cell.is_html %}
+                            {{ cell.value|safe }}
                         {% elif cell.is_long and cell.value %}
                         <button type="button" class="btn-icon" style="background: var(--secondary); cursor: pointer; display: inline-flex;" onclick="showObservation('{{ cell.value|escapejs }}')" title="Ver Texto Completo">
                             <i class='bx bx-message-square-detail'></i>
