@@ -10,6 +10,45 @@ MODELS_TO_CRUD = [
     Documento, Visita, Colaborador, NecessidadeDocumento, User
 ]
 
+def get_irregular_empresas_ids():
+    import datetime
+    hoje = datetime.date.today()
+    
+    # 1. Companies with expired documents
+    expired_ids = set(Empresa.objects.filter(documentos__data_vencimento__lt=hoje).values_list('id', flat=True))
+    
+    # 2. Companies missing required documents
+    mandatory_types = set(TipoDocumento.objects.filter(obrigatorio=True).values_list('id', flat=True))
+    
+    from model.models import NecessidadeDocumento
+    necessidades = NecessidadeDocumento.objects.values_list('empresa_id', 'tipo_documento_id')
+    
+    required_map = {}
+    all_empresas = Empresa.objects.all()
+    for emp in all_empresas:
+        required_map[emp.id] = set(mandatory_types)
+        
+    for emp_id, tipo_id in necessidades:
+        if emp_id in required_map:
+            required_map[emp_id].add(tipo_id)
+            
+    from model.models import Documento
+    uploaded = Documento.objects.values_list('empresa_id', 'tipo_id')
+    uploaded_map = {}
+    for emp_id, tipo_id in uploaded:
+        if emp_id not in uploaded_map:
+            uploaded_map[emp_id] = set()
+        uploaded_map[emp_id].add(tipo_id)
+        
+    irregular_ids = set(expired_ids)
+    for emp_id, req_set in required_map.items():
+        up_set = uploaded_map.get(emp_id, set())
+        if not req_set.issubset(up_set):
+            irregular_ids.add(emp_id)
+            
+    return list(irregular_ids)
+
+
 class GenericListView(LoginRequiredMixin, ListView):
     template_name = 'generic_list.html'
     
@@ -34,13 +73,11 @@ class GenericListView(LoginRequiredMixin, ListView):
         elif self.model == Empresa:
             status_filtro = self.request.GET.get('status_documento')
             if status_filtro:
-                import datetime
-                hoje = datetime.date.today()
+                irregular_ids = get_irregular_empresas_ids()
                 if status_filtro == 'vencido':
-                    queryset = queryset.filter(documentos__data_vencimento__lt=hoje).distinct()
+                    queryset = queryset.filter(id__in=irregular_ids)
                 elif status_filtro == 'regular':
-                    empresas_com_vencidos = Empresa.objects.filter(documentos__data_vencimento__lt=hoje).values_list('id', flat=True)
-                    queryset = queryset.exclude(id__in=empresas_com_vencidos)
+                    queryset = queryset.exclude(id__in=irregular_ids)
                 
         # Ordenar por empresa se o modelo tiver campo relacionado a Empresa
         if hasattr(self.model, 'empresa'):
@@ -65,12 +102,16 @@ class GenericListView(LoginRequiredMixin, ListView):
         
         show_extra_companies = False
         show_rt_empresas = False
+        show_empresa_compliance = False
         if self.model in [TipoDocumento, CategoriaVisita]:
             show_extra_companies = True
             context['headers'].append("Empresas Relacionadas")
         if self.model == ResponsavelTecnico:
             show_rt_empresas = True
             context['headers'].append("Empresas sob Responsabilidade")
+        if self.model == Empresa:
+            show_empresa_compliance = True
+            context['headers'].append("Status de Conformidade")
             
         rows = []
         for obj in context['object_list']:
@@ -133,6 +174,39 @@ class GenericListView(LoginRequiredMixin, ListView):
                     'bool_val': None,
                     'field_name': '',
                 })
+
+            if show_empresa_compliance:
+                hoje = datetime.date.today()
+                has_expired = obj.documentos.filter(data_vencimento__lt=hoje).exists()
+                
+                from django.db.models import Q
+                required_types = TipoDocumento.objects.filter(
+                    Q(obrigatorio=True) | Q(necessidades_documento__empresa=obj)
+                ).distinct()
+                uploaded_types = set(obj.documentos.values_list('tipo_id', flat=True))
+                missing_types = [rt.descricao for rt in required_types if rt.id not in uploaded_types]
+                
+                if has_expired or missing_types:
+                    pendencias = []
+                    if has_expired:
+                        pendencias.append("Docs Vencidos")
+                    if missing_types:
+                        pendencias.append(f"Faltando: {', '.join(missing_types)}")
+                    title_text = "; ".join(pendencias)
+                    status_html = f"<span class='status-badge status-vencido' title='{title_text}' style='display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);'><i class='bx bx-error-circle'></i> Irregular</span>"
+                else:
+                    status_html = "<span class='status-badge status-regular' style='display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);'><i class='bx bx-check-circle'></i> Regular</span>"
+                
+                row.append({
+                    'value': status_html,
+                    'is_long': False,
+                    'is_file': False,
+                    'file_url': '',
+                    'is_bool': False,
+                    'bool_val': None,
+                    'is_html': True,
+                    'field_name': 'status_conformidade',
+                })
                 
             rows.append({'obj': obj, 'cells': row})
         context['rows'] = rows
@@ -148,12 +222,13 @@ class GenericCreateView(LoginRequiredMixin, CreateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_class(self):
-        from view.forms import UserForm, ResponsavelTecnicoForm, NecessidadeDocumentoForm, DocumentoForm
+        from view.forms import UserForm, ResponsavelTecnicoForm, NecessidadeDocumentoForm, DocumentoForm, EmpresaForm
         forms_map = {
             User: UserForm,
             ResponsavelTecnico: ResponsavelTecnicoForm,
             NecessidadeDocumento: NecessidadeDocumentoForm,
             Documento: DocumentoForm,
+            Empresa: EmpresaForm,
         }
         if self.model in forms_map:
             return forms_map[self.model]
@@ -183,12 +258,13 @@ class GenericUpdateView(LoginRequiredMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_class(self):
-        from view.forms import UserForm, ResponsavelTecnicoForm, NecessidadeDocumentoForm, DocumentoForm
+        from view.forms import UserForm, ResponsavelTecnicoForm, NecessidadeDocumentoForm, DocumentoForm, EmpresaForm
         forms_map = {
             User: UserForm,
             ResponsavelTecnico: ResponsavelTecnicoForm,
             NecessidadeDocumento: NecessidadeDocumentoForm,
             Documento: DocumentoForm,
+            Empresa: EmpresaForm,
         }
         if self.model in forms_map:
             return forms_map[self.model]

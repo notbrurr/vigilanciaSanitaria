@@ -89,7 +89,17 @@ def empresa_allowed_documents_view(request, pk):
         Q(obrigatorio=True) | Q(necessidades_documento__empresa=empresa)
     ).distinct()
     data = [{'id': t.id, 'descricao': t.descricao} for t in tipos]
-    return JsonResponse({'document_types': data})
+    
+    rt_data = None
+    if empresa.responsavel_tecnico:
+        rt_data = {
+            'id': empresa.responsavel_tecnico.id,
+            'nome': empresa.responsavel_tecnico.nome
+        }
+    return JsonResponse({
+        'document_types': data,
+        'responsavel_tecnico': rt_data
+    })
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render

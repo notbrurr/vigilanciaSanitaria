@@ -278,14 +278,20 @@ document.addEventListener('DOMContentLoaded', function() {
         empresaSelect.value = empresaParam;
     }
 
+    const rtSelect = document.getElementById('id_responsavel_tecnico');
+
     if (empresaSelect && tipoSelect) {
         function updateDocumentTypes() {
             const empresaId = empresaSelect.value;
             if (!empresaId) {
                 tipoSelect.innerHTML = '<option value="">-- Selecione uma empresa primeiro --</option>';
+                if (rtSelect) {
+                    rtSelect.innerHTML = '<option value="">-- Selecione uma empresa primeiro --</option>';
+                }
                 return;
             }
             const currentTipoValue = tipoSelect.getAttribute('data-initial-val') || tipoSelect.value;
+            
             fetch(`/api/empresa/${empresaId}/documentos-permitidos/`)
                 .then(res => res.json())
                 .then(data => {
@@ -299,11 +305,25 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         tipoSelect.appendChild(option);
                     });
+                    
+                    if (rtSelect) {
+                        rtSelect.innerHTML = '<option value="">---------</option>';
+                        if (data.responsavel_tecnico) {
+                            const option = document.createElement('option');
+                            option.value = data.responsavel_tecnico.id;
+                            option.textContent = data.responsavel_tecnico.nome;
+                            option.selected = true;
+                            rtSelect.appendChild(option);
+                        }
+                    }
                 });
         }
 
         // Save initial value to attribute
         tipoSelect.setAttribute('data-initial-val', tipoSelect.value);
+        if (rtSelect) {
+            rtSelect.setAttribute('data-initial-val', rtSelect.value);
+        }
 
         empresaSelect.addEventListener('change', updateDocumentTypes);
         // Se empresa já está selecionada (carregamento da página ou pré-preenchimento), dispara o filtro

@@ -126,3 +126,19 @@ class DocumentoForm(forms.ModelForm):
                 empresas=self.instance.empresa
             ).distinct()
 
+
+class EmpresaForm(forms.ModelForm):
+    class Meta:
+        model = Empresa
+        fields = ['cnpj', 'razao_social', 'nome_fantasia', 'endereco', 'telefone', 'email', 'responsavel_tecnico']
+        labels = {
+            'cnpj': 'CNPJ',
+            'razao_social': 'Razão Social',
+            'nome_fantasia': 'Nome Fantasia',
+            'endereco': 'Endereço',
+            'telefone': 'Telefone',
+            'email': 'E-mail',
+            'responsavel_tecnico': 'Responsável Técnico',
+        }
+
+
